@@ -25,29 +25,29 @@
         type="text"
         v-model="searchInput"
         :placeholder="placeholderText"
-        @keyup.enter="realizarBusqueda"
+        @keyup.enter="performSearch"
       />
-      <button @click="realizarBusqueda">Estimar Fechas</button>
+      <button @click="performSearch">Estimar Fechas</button>
     </div>
 
-    <div v-if="resultado" class="result">
+    <div v-if="result" class="result">
       <div v-if="error" class="error-message">
-        <p>{{ resultado }}</p>
+        <p>{{ result }}</p>
       </div>
-      <div v-else-if="typeof resultado === 'object'" class="success-message">
-        <p>¡Hola, <strong>{{ aspiranteEncontrado?.nombre_apellidos }}</strong>!</p>
+      <div v-else-if="typeof result === 'object'" class="success-message">
+        <p>¡Hola, <strong>{{ foundAspirant?.nombre_apellidos }}</strong>!</p>
         <p>
-          Perteneces al <strong>Tribunal {{ tribunalEncontrado }}</strong> con el nº de orden de sorteo <strong>{{ aspiranteEncontrado?.numero_orden_sorteo }}</strong> (Nº orden alfabético: {{ aspiranteEncontrado?.numero_orden_alfabetico }}).
+          Perteneces al <strong>Tribunal {{ foundTribunal }}</strong> con el nº de orden de sorteo <strong>{{ foundAspirant?.numero_orden_sorteo }}</strong> (Nº orden alfabético: {{ foundAspirant?.numero_orden_alfabetico }}).
         </p>
         
         <div class="comparison-container">
           <div class="date-container">
               <p class="estimation-title">Estimación según ritmo <strong>2023</strong></p>
-              <p class="final-date">{{ resultado.fecha2023 }}</p>
+              <p class="final-date">{{ result.date2023 }}</p>
           </div>
           <div class="date-container">
               <p class="estimation-title">Estimación según ritmo <strong>2021</strong></p>
-              <p class="final-date">{{ resultado.fecha2021 }}</p>
+              <p class="final-date">{{ result.date2021 }}</p>
           </div>
         </div>
         
@@ -64,7 +64,7 @@
 import { ref, computed } from 'vue';
 
 // Adaptamos el tipo a los nuevos nombres
-interface Aspirante {
+interface Aspirant {
   numero_orden_sorteo: number;
   nombre_apellidos: string;
   numero_orden_alfabetico: number;
@@ -73,37 +73,37 @@ interface Aspirante {
 import tribunal1Data from '@/data/tribunal1.json';
 import tribunal2Data from '@/data/tribunal2.json';
 
-// --- PARÁMETROS DE ESTIMACIÓN ---
-const FECHA_INICIO_OPOSICION = new Date('2025-09-09T09:00:00'); 
-const DIAS_FESTIVOS_2025: string[] = [
+// --- ESTIMATION PARAMETERS ---
+const EXAM_START_DATE = new Date('2025-09-09T09:00:00'); 
+const HOLIDAYS_2025: string[] = [
   "2025-10-13", // Lunes siguiente a la Fiesta Nacional
   "2025-12-08", // Inmaculada Concepción
   "2025-12-25", // Navidad
 ];
 
-// Estadísticas basadas en la convocatoria de 2023
+// Statistics based on the 2023 convocation
 const STATS_2023 = {
-  ritmo: 5,   // Opositores convocados por día
-  tasa: 0.28  // 28% de retirada
+  pace: 5,   // Opositores convocados por día
+  withdrawalRate: 0.28  // 28% de retirada
 };
 
-// Estadísticas basadas en la convocatoria de 2021 (más conservadora)
+// Statistics based on the 2021 convocation (more conservative)
 const STATS_2021 = {
-  ritmo: 4,   // Opositores convocados por día
-  tasa: 0.25  // 25% de retirada
+  pace: 4,   // Opositores convocados por día
+  withdrawalRate: 0.25  // 25% de retirada
 };
 
-// --- LÓGICA DEL COMPONENTE ---
+// --- COMPONENT LOGIC ---
 
 const searchMode = ref<'name' | 'order' | 'draw'>('name');
 const searchInput = ref('');
-const resultado = ref<null | { fecha2023: string, fecha2021: string } | string>(null);
+const result = ref<null | { date2023: string, date2021: string } | string>(null);
 const error = ref(false);
-const tribunalEncontrado = ref<number | null>(null);
-const aspiranteEncontrado = ref<Aspirante | null>(null);
+const foundTribunal = ref<number | null>(null);
+const foundAspirant = ref<Aspirant | null>(null);
 
-const tribunal1: Aspirante[] = tribunal1Data;
-const tribunal2: Aspirante[] = tribunal2Data;
+const tribunal1: Aspirant[] = tribunal1Data;
+const tribunal2: Aspirant[] = tribunal2Data;
 
 const placeholderText = computed(() => {
   switch (searchMode.value) {
@@ -114,39 +114,57 @@ const placeholderText = computed(() => {
 });
 
 /**
- * Función genérica para calcular la fecha estimada.
- * @param aspirante El opositor.
- * @param tribunal El tribunal del opositor.
- * @param stats Objeto con el ritmo y la tasa de retirada a aplicar.
- * @returns La fecha estimada.
+ * UPDATED function to estimate the exam date based on the new weekly schedule.
+ * @param aspirant The found aspirant object.
+ * @param tribunal The aspirant's tribunal number.
+ * @param stats The statistics object { pace, withdrawalRate } to apply.
+ * @returns The estimated exam Date object.
  */
-const calcularFechaEstimada = (aspirante: Aspirante, tribunal: number, stats: { ritmo: number, tasa: number }): Date => {
-  const opositoresPrevios = tribunal === 1 
-    ? aspirante.numero_orden_sorteo - 1 
-    : aspirante.numero_orden_sorteo - tribunal1.length - 1;
+const estimateExamDate = (aspirant: Aspirant, tribunal: number, stats: { pace: number, withdrawalRate: number }): Date => {
+  const precedingAspirants = tribunal === 1 
+    ? aspirant.numero_orden_sorteo - 1 
+    : aspirant.numero_orden_sorteo - tribunal1.length - 1;
 
-  const retiradasEstimadas = Math.round(opositoresPrevios * stats.tasa);
-  const examenesEfectivosPrevios = opositoresPrevios - retiradasEstimadas;
-  const diasNecesarios = Math.ceil(examenesEfectivosPrevios / stats.ritmo);
+  const estimatedWithdrawals = Math.round(precedingAspirants * stats.withdrawalRate);
+  const effectivePreviousExams = precedingAspirants - estimatedWithdrawals;
 
-  let fechaEstimada = new Date(FECHA_INICIO_OPOSICION);
-  if (diasNecesarios <= 0) {
-    return fechaEstimada;
+  if (effectivePreviousExams <= 0) {
+    return new Date(EXAM_START_DATE);
   }
 
-  let diasHabilesContados = 0;
-  while (diasHabilesContados < diasNecesarios) {
-    fechaEstimada.setDate(fechaEstimada.getDate() + 1);
-    const diaDeLaSemana = fechaEstimada.getDay();
-    const fechaISO = fechaEstimada.toISOString().split('T')[0];
-    const esFinDeSemana = diaDeLaSemana === 0 || diaDeLaSemana === 6;
-    const esFestivo = DIAS_FESTIVOS_2025.includes(fechaISO);
+  let estimatedDate = new Date(EXAM_START_DATE);
+  let examsProcessed = 0;
 
-    if (!esFinDeSemana && !esFestivo) {
-      diasHabilesContados++;
+  // Loop until we have processed enough exam slots to cover the people in front.
+  while (examsProcessed < effectivePreviousExams) {
+    const dayOfWeek = estimatedDate.getDay(); // Sunday: 0, Monday: 1, ..., Saturday: 6
+    const isoDate = estimatedDate.toISOString().split('T')[0];
+    
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isHoliday = HOLIDAYS_2025.includes(isoDate);
+
+    if (!isWeekend && !isHoliday) {
+      switch (dayOfWeek) {
+        case 1: // Monday: Morning and Afternoon sessions
+          examsProcessed += stats.pace * 2;
+          break;
+        case 2: // Tuesday: Afternoon session only
+          examsProcessed += stats.pace;
+          break;
+        case 3: // Wednesday: Afternoon session only
+          examsProcessed += stats.pace;
+          break;
+        // Thursday (4) and Friday (5) have no exams, so we do nothing.
+      }
+    }
+
+    // If we haven't reached the target yet, advance to the next day.
+    if (examsProcessed < effectivePreviousExams) {
+      estimatedDate.setDate(estimatedDate.getDate() + 1);
     }
   }
-  return fechaEstimada;
+
+  return estimatedDate;
 };
 
 const formatDate = (date: Date): string => {
@@ -155,81 +173,73 @@ const formatDate = (date: Date): string => {
   });
 };
 
-const realizarBusqueda = () => {
+const performSearch = () => {
   const query = searchInput.value.trim();
   if (!query) {
-    resultado.value = 'Por favor, introduce un dato para la búsqueda.';
+    result.value = 'Por favor, introduce un dato para la búsqueda.';
     error.value = true;
     return;
   }
   
   error.value = false;
-  resultado.value = null;
-  aspiranteEncontrado.value = null;
-  tribunalEncontrado.value = null;
+  result.value = null;
+  foundAspirant.value = null;
+  foundTribunal.value = null;
   
-  let aspirante: Aspirante | undefined;
+  let aspirant: Aspirant | undefined;
   let tribunal: number | null = null;
   
-  const numQuery = parseInt(query, 10);
+  const numericQuery = parseInt(query, 10);
 
   switch (searchMode.value) {
     case 'name':
-      const nombreNormalizado = query.toUpperCase();
-      aspirante = tribunal1.find(p => p.nombre_apellidos.toUpperCase() === nombreNormalizado);
-      if (aspirante) tribunal = 1;
+      const normalizedName = query.toUpperCase();
+      aspirant = tribunal1.find(p => p.nombre_apellidos.toUpperCase() === normalizedName);
+      if (aspirant) tribunal = 1;
       else {
-        aspirante = tribunal2.find(p => p.nombre_apellidos.toUpperCase() === nombreNormalizado);
-        if (aspirante) tribunal = 2;
+        aspirant = tribunal2.find(p => p.nombre_apellidos.toUpperCase() === normalizedName);
+        if (aspirant) tribunal = 2;
       }
       break;
 
     case 'order':
-      if (isNaN(numQuery)) {
-        error.value = true;
-        resultado.value = "Debes introducir un número.";
-        return;
-      }
-      aspirante = tribunal1.find(p => p.numero_orden_sorteo === numQuery);
-      if (aspirante) tribunal = 1;
+      if (isNaN(numericQuery)) { error.value = true; result.value = "Debes introducir un número."; return; }
+      aspirant = tribunal1.find(p => p.numero_orden_sorteo === numericQuery);
+      if (aspirant) tribunal = 1;
       else {
-        aspirante = tribunal2.find(p => p.numero_orden_sorteo === numQuery);
-        if (aspirante) tribunal = 2;
+        aspirant = tribunal2.find(p => p.numero_orden_sorteo === numericQuery);
+        if (aspirant) tribunal = 2;
       }
       break;
 
     case 'draw':
-       if (isNaN(numQuery)) {
-        error.value = true;
-        resultado.value = "Debes introducir un número.";
-        return;
-      }
-      aspirante = tribunal1.find(p => p.numero_orden_alfabetico === numQuery);
-      if (aspirante) tribunal = 1;
+       if (isNaN(numericQuery)) { error.value = true; result.value = "Debes introducir un número."; return; }
+      aspirant = tribunal1.find(p => p.numero_orden_alfabetico === numericQuery);
+      if (aspirant) tribunal = 1;
       else {
-        aspirante = tribunal2.find(p => p.numero_orden_alfabetico === numQuery);
-        if (aspirante) tribunal = 2;
+        aspirant = tribunal2.find(p => p.numero_orden_alfabetico === numericQuery);
+        if (aspirant) tribunal = 2;
       }
       break;
   }
 
-  if (aspirante && tribunal) {
-    aspiranteEncontrado.value = aspirante;
-    tribunalEncontrado.value = tribunal;
+  if (aspirant && tribunal) {
+    foundAspirant.value = aspirant;
+    foundTribunal.value = tribunal;
     
     // Calculamos ambas fechas
-    const fecha2023 = calcularFechaEstimada(aspirante, tribunal, STATS_2023);
-    const fecha2021 = calcularFechaEstimada(aspirante, tribunal, STATS_2021);
+    const dateBasedOn2023 = estimateExamDate(aspirant, tribunal, STATS_2023);
+    const dateBasedOn2021 = estimateExamDate(aspirant, tribunal, STATS_2021);
     
     // Guardamos el objeto con las dos fechas formateadas
-    resultado.value = {
-      fecha2023: formatDate(fecha2023),
-      fecha2021: formatDate(fecha2021)
+    result.value = {
+      date2023: formatDate(dateBasedOn2023),
+      date2021: formatDate(dateBasedOn2021)
     };
 
   } else {
     error.value = true;
-    resultado.value = 'No se encontró a ningún opositor con el dato introducido. Revisa que sea correcto.';
+    result.value = 'No se encontró a ningún opositor con el dato introducido. Revisa que sea correcto.';
   }
 };
 </script>
