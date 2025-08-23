@@ -1,4 +1,3 @@
-
 # Nombre del workflow, aparecerá en la pestaña "Actions" de tu repositorio
 name: Scrape Oposiciones Data
 
@@ -19,6 +18,11 @@ jobs:
     # El tipo de máquina virtual donde se ejecutará el código
     runs-on: ubuntu-latest
 
+    # --- AÑADE ESTE BLOQUE DE PERMISOS ---
+    # Le damos permiso a la Action para escribir en el repositorio
+    permissions:
+      contents: write
+
     # Pasos (steps) que se ejecutarán en orden
     steps:
       # 1. Descarga tu código del repositorio a la máquina virtual
@@ -29,7 +33,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9' # Puedes usar una versión más reciente si quieres
+          python-version: '3.9'
 
       # 3. Instala las librerías necesarias desde requirements.txt
       - name: Install dependencies
@@ -48,13 +52,10 @@ jobs:
         run: python3 scraper.py
 
       # 6. Sube los ficheros JSON actualizados al repositorio
-      # Este paso es la clave: detecta si los JSON han cambiado y, si es así,
-      # crea un nuevo commit y lo sube a tu rama principal (main/master).
       - name: Commit and push if data changed
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "📊 Chore: Update scraped data"
-          # Asegúrate de que los nombres coincidan con los de tu script
           file_pattern: tribunal1_inscritos.json tribunal2_inscritos.json
           commit_user_name: "GitHub Actions Bot"
           commit_user_email: "actions@github.com"
