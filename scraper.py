@@ -3,6 +3,8 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
+# --- 1. IMPORTAMOS LAS OPCIONES DE CHROME ---
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -18,7 +20,19 @@ def scrape_tribunal_selenium(tribunal_name, base_url):
     """
     print(f"🚀 Comenzando la extracción con Selenium para el {tribunal_name.upper()}...")
     
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+    # --- 2. CONFIGURAMOS LAS OPCIONES PARA EL ENTORNO DE GITHUB ACTIONS ---
+    chrome_options = ChromeOptions()
+    chrome_options.add_argument("--headless") # Esencial para ejecutar sin interfaz gráfica
+    chrome_options.add_argument("--no-sandbox") # Requerido en muchos entornos de servidor/docker
+    chrome_options.add_argument("--disable-dev-shm-usage") # Evita problemas de memoria compartida
+    chrome_options.add_argument("--window-size=1920,1080") # Define un tamaño de ventana virtual
+
+    # --- 3. PASAMOS LAS OPCIONES AL INICIAR EL NAVEGADOR ---
+    driver = webdriver.Chrome(
+        service=ChromeService(ChromeDriverManager().install()),
+        options=chrome_options
+    )
+    
     driver.get(base_url)
     
     all_aspirants = []
@@ -37,13 +51,7 @@ def scrape_tribunal_selenium(tribunal_name, base_url):
                 
                 if len(cells) >= 5:
                     try:
-                        # --- CAMBIO APLICADO AQUÍ ---
-                        # Se intercambian las fuentes de los datos según tu petición.
-                        
-                        # Columna 1 ("Orden") -> ahora va a "numero_orden"
                         valor_orden = int(cells[0].text.strip())
-                        
-                        # Columna 2 ("Número Sorteo") -> ahora va a "numero_sorteo"
                         valor_numero_sorteo = int(cells[1].text.strip())
                         
                         nombre = cells[2].text.strip()
@@ -59,11 +67,9 @@ def scrape_tribunal_selenium(tribunal_name, base_url):
                             "turno": turno
                         }
                         all_aspirants.append(aspirant)
-
                     except (ValueError, IndexError):
                         print(f"        - Fila ignorada por formato de datos incorrecto.")
                         continue
-
         except NoSuchElementException:
             print("    - No se encontró la tabla en la página. Finalizando.")
             break
@@ -92,7 +98,7 @@ if __name__ == "__main__":
         aspirants_data = scrape_tribunal_selenium(name, url)
         
         if aspirants_data:
-            file_name = f"{name}_inscritos.json"
+            file_name = f"{name}_inscritos.json" # Nombres de fichero corregidos
             with open(file_name, 'w', encoding='utf-8') as f:
                 json.dump(aspirants_data, f, ensure_ascii=False, indent=2)
             print(f"✅ ¡Éxito! Se han guardado {len(aspirants_data)} opositores en el fichero '{file_name}'\n")
