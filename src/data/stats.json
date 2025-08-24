@@ -14,5 +14,13 @@
     "aprobados_segundo_oral": 193,
     "aprobados_finales": 90,
     "plazas": 90
+  },
+  {
+    "convocatoria": "Oposición 2025",
+    "admitidos": 847,
+    "plazas": 140,
+    "aprobados_primer_oral": null,
+    "aprobados_segundo_oral": null,
+    "aprobados_finales": null
   }
 ]
