@@ -5,7 +5,7 @@ import CalculadoraView from '../views/CalculadoraView.vue';
 
 const routes = [
   {
-    path: '/calculator',
+    path: '/calculadora-oposicion',
     name: 'Calculadora',
     component: CalculadoraView,
   },

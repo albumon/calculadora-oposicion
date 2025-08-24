@@ -54,7 +54,7 @@ El proyecto tiene dos partes: la aplicación web (Vue) y el script de extracció
 
 1.  **Clona el repositorio:**
     ```bash
-    git clone [https://github.com/albumon/calculator.git](https://github.com/albumon/calculator.git)
+    git clone [https://github.com/albumon/calculadora-oposicion.git](https://github.com/albumon/calculadora-oposicion.git)
     ```
 2.  **Navega a la carpeta del proyecto:**
     ```bash
