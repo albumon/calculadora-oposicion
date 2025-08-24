@@ -1,6 +1,6 @@
 <template>
   <main>
-    <ExamCalculator />
+    <router-view />
     <Statistics />
   </main>
 </template>

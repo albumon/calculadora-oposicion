@@ -2,14 +2,25 @@
   <div class="calculator-container">
     <h1>📅 Calculadora de Fechas (Opo Notarías 2025)</h1>
     <p class="subtitle">
-      Introduce tu nº de orden o nº de sorteo para estimar tu fecha.
+      Elige un método de búsqueda e introduce tu número para estimar tu fecha.
     </p>
+
+    <div class="search-options">
+      <label>
+        <input type="radio" v-model="searchMode" value="orden" />
+        Nº de Orden
+      </label>
+      <label>
+        <input type="radio" v-model="searchMode" value="sorteo" />
+        Nº de Sorteo
+      </label>
+    </div>
 
     <div class="input-group">
       <input
         type="number"
         v-model="searchInput"
-        placeholder="Nº de orden o Nº de sorteo..."
+        :placeholder="placeholderText"
         @keyup.enter="performSearch"
       />
       <button @click="performSearch">Estimar Fechas</button>
@@ -63,7 +74,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+// --- IMPORTS ACTUALIZADOS ---
+import { ref, computed, watch, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 interface Aspirant {
   numero_orden: number;
@@ -80,6 +93,8 @@ const HOLIDAYS_2025: string[] = ["2025-10-13", "2025-12-08", "2025-12-25"];
 const STATS_2023 = { pace: 5, withdrawalRate: 0.28 };
 const STATS_2021 = { pace: 4, withdrawalRate: 0.25 };
 
+// --- LÓGICA DEL COMPONENTE CON VUE ROUTER ---
+const searchMode = ref<'orden' | 'sorteo'>('orden');
 const searchInput = ref<number | null>(null);
 const result = ref<null | { date2023: string, date2021: string }>(null);
 const errorMessage = ref<string | null>(null);
@@ -88,9 +103,36 @@ const foundTribunal = ref<number | null>(null);
 const foundAspirant = ref<Aspirant | null>(null);
 const calculationMode = ref<'orden' | 'sorteo' | 'simulacion' | null>(null);
 
+// Instancias de Vue Router
+const router = useRouter();
+const route = useRoute();
+
 const tribunal1: Aspirant[] = tribunal1Data;
 const tribunal2: Aspirant[] = tribunal2Data;
 const allInscritos: Aspirant[] = [...tribunal1, ...tribunal2];
+
+const placeholderText = computed(() => {
+  return searchMode.value === 'orden'
+    ? 'Escribe tu nº de orden...'
+    : 'Escribe tu nº de sorteo...';
+});
+
+// --- NUEVA FUNCIÓN PARA RESETEAR EL ESTADO ---
+const resetSearchState = () => {
+    searchInput.value = null;
+    result.value = null;
+    errorMessage.value = null;
+    foundAspirant.value = null;
+    foundTribunal.value = null;
+    calculationMode.value = null;
+    // Limpiamos también la URL
+    router.push({ query: {} });
+};
+
+// --- WATCHER PARA LIMPIAR AL CAMBIAR DE MODO ---
+watch(searchMode, () => {
+    resetSearchState();
+});
 
 const estimateExamDate = (precedingCount: number, stats: { pace: number, withdrawalRate: number }): Date => {
   const estimatedWithdrawals = Math.round(precedingCount * stats.withdrawalRate);
@@ -114,7 +156,6 @@ const estimateExamDate = (precedingCount: number, stats: { pace: number, withdra
         case 3: examsProcessed += stats.pace; break;
       }
     }
-
     if (examsProcessed < effectivePreviousExams) {
       estimatedDate.setDate(estimatedDate.getDate() + 1);
     }
@@ -131,6 +172,7 @@ const formatDate = (date: Date): string => {
 const performSearch = () => {
   const query = searchInput.value;
   
+  // Limpiamos resultados previos pero mantenemos el input
   result.value = null;
   errorMessage.value = null;
   foundAspirant.value = null;
@@ -142,32 +184,31 @@ const performSearch = () => {
     return;
   }
   
-  // --- LÓGICA DE BÚSQUEDA CORREGIDA ---
   let aspirantFound: Aspirant | undefined;
   let precedingCount = 0;
 
-  // 1. Buscamos primero por NÚMERO DE ORDEN
-  aspirantFound = allInscritos.find(p => p.numero_orden === query);
-  if (aspirantFound) {
-    calculationMode.value = 'orden';
+  if (searchMode.value === 'orden') {
+    aspirantFound = allInscritos.find(p => p.numero_orden === query);
+    if (aspirantFound) {
+      calculationMode.value = 'orden';
+      foundAspirant.value = aspirantFound;
+      precedingCount = aspirantFound.numero_orden - 1;
+      foundTribunal.value = tribunal1.some(p => p.numero_orden === aspirantFound!.numero_orden) ? 1 : 2;
+    } else {
+      errorMessage.value = `El nº de orden ${query} no corresponde a ningún inscrito.`;
+      return;
+    }
   } else {
-    // 2. Si no, buscamos por NÚMERO DE SORTEO
     aspirantFound = allInscritos.find(p => p.numero_sorteo === query);
     if (aspirantFound) {
       calculationMode.value = 'sorteo';
+      foundAspirant.value = aspirantFound;
+      precedingCount = aspirantFound.numero_orden - 1;
+      foundTribunal.value = tribunal1.some(p => p.numero_orden === aspirantFound!.numero_orden) ? 1 : 2;
+    } else {
+      calculationMode.value = 'simulacion';
+      precedingCount = allInscritos.filter(p => p.numero_sorteo < query).length;
     }
-  }
-
-  if (aspirantFound) {
-    // --- ESCENARIO A: El usuario ESTÁ INSCRITO (encontrado por orden o sorteo) ---
-    foundAspirant.value = aspirantFound;
-    // El cálculo SIEMPRE se basa en el número de orden real
-    precedingCount = aspirantFound.numero_orden - 1;
-    foundTribunal.value = tribunal1.some(p => p.numero_orden === aspirantFound!.numero_orden) ? 1 : 2;
-  } else {
-    // --- ESCENARIO B: El usuario NO ESTÁ INSCRITO (simulación) ---
-    calculationMode.value = 'simulacion';
-    precedingCount = allInscritos.filter(p => p.numero_sorteo < query).length;
   }
   
   const dateBasedOn2023 = estimateExamDate(precedingCount, STATS_2023);
@@ -177,10 +218,43 @@ const performSearch = () => {
     date2023: formatDate(dateBasedOn2023),
     date2021: formatDate(dateBasedOn2021)
   };
+
+  // --- ACTUALIZAMOS LA URL CON LA BÚSQUEDA REALIZADA ---
+  router.push({
+    query: {
+        modo: searchMode.value,
+        q: searchInput.value
+    }
+  });
 };
+
+// --- LÓGICA PARA LEER LA URL AL CARGAR LA PÁGINA ---
+const syncStateFromUrl = (query: typeof route.query) => {
+    const { modo, q } = query;
+    if ((modo === 'orden' || modo === 'sorteo') && q && !isNaN(Number(q))) {
+        searchMode.value = modo;
+        searchInput.value = parseInt(q as string, 10);
+        performSearch();
+    }
+};
+
+// Sincroniza al montar el componente (primera carga)
+onMounted(() => {
+    syncStateFromUrl(route.query);
+});
+
+// Sincroniza si el usuario navega con los botones de atrás/adelante del navegador
+watch(() => route.query, (newQuery) => {
+    // Evita bucles infinitos, solo reacciona si el input no coincide con la URL
+    if (searchInput.value !== Number(newQuery.q) || searchMode.value !== newQuery.modo) {
+        syncStateFromUrl(newQuery);
+    }
+});
+
 </script>
 
 <style scoped>
+/* Estilos actualizados para los radio buttons */
 .calculator-container {
   max-width: 700px;
   margin: 2rem auto;
@@ -193,6 +267,27 @@ const performSearch = () => {
 }
 .subtitle {
     color: #555;
+}
+.search-options {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.search-options label {
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  background-color: #e9e9e9;
+  transition: background-color 0.3s;
+}
+.search-options input[type="radio"] {
+  display: none;
+}
+.search-options label:has(input[type="radio"]:checked) {
+    background-color: #42b983;
+    color: white;
 }
 .input-group {
   display: flex;
