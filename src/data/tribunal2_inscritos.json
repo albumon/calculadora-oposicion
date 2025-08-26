@@ -37,20 +37,20 @@
   },
   {
     "numero_orden": 7,
+    "nombre_apellidos": "FORT FERRUS, PAULA MARÍA",
+    "numero_sorteo": 582,
+    "turno": "General"
+  },
+  {
+    "numero_orden": 8,
     "nombre_apellidos": "VIDAL SALVIA, HERENA",
     "numero_sorteo": 601,
     "turno": "General"
   },
   {
-    "numero_orden": 8,
+    "numero_orden": 9,
     "nombre_apellidos": "-, -",
     "numero_sorteo": 696,
-    "turno": "General"
-  },
-  {
-    "numero_orden": 9,
-    "nombre_apellidos": "PICATOSTE APARICIO, FERNANDO",
-    "numero_sorteo": 769,
     "turno": "General"
   }
 ]
