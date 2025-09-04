@@ -1,21 +1,16 @@
-# Flujo de trabajo para construir y desplegar un sitio de Vue en GitHub Pages
 name: Deploy Vue site to Pages
 
 on:
-  # Se ejecuta en cada push a la rama `main`
   push:
     branches: [main]
 
-  # Permite ejecutarlo manualmente desde la pestaña Actions en GitHub
   workflow_dispatch:
 
-# Permisos para el GITHUB_TOKEN
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Permitir que solo un despliegue se ejecute a la vez
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -28,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4 # Actualizado
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4 # Actualizado
+        uses: actions/setup-node@v4
         with:
           node-version: 22
 
@@ -41,14 +36,17 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Copy 404.html
+        run: cp dist/index.html dist/404.html
+
       - name: Setup Pages
-        uses: actions/configure-pages@v5 # Actualizado
+        uses: actions/configure-pages@v5
       
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3 # Actualizado
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4 # Actualizado
+        uses: actions/deploy-pages@v4
