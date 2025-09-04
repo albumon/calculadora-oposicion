@@ -2,18 +2,35 @@
   <div class="calculator-container">
     <h1>📅 Calculadora de Fechas (Opo Notarías 2025)</h1>
     <p class="subtitle">
-      Elige un método de búsqueda e introduce tu número para estimar tu fecha.
+      Elige un tribunal y un método de búsqueda para estimar tu fecha.
     </p>
 
-    <div class="search-options">
-      <label>
-        <input type="radio" v-model="searchMode" value="orden" />
-        Nº de Orden
-      </label>
-      <label>
-        <input type="radio" v-model="searchMode" value="sorteo" />
-        Nº de Sorteo
-      </label>
+    <div class="tribunal-selector">
+      <h4>1. Elige un Tribunal</h4>
+      <div class="search-options">
+          <label>
+            <input type="radio" v-model="selectedTribunal" :value="1" />
+            Tribunal 1
+          </label>
+          <label>
+            <input type="radio" v-model="selectedTribunal" :value="2" />
+            Tribunal 2
+          </label>
+        </div>
+    </div>
+
+    <div class="tribunal-selector" style="background-color: #f0f0f0; border-color: #ddd;">
+      <h4>2. Elige un método de búsqueda</h4>
+      <div class="search-options">
+        <label>
+          <input type="radio" v-model="searchMode" value="orden" />
+          Nº de Orden
+        </label>
+        <label>
+          <input type="radio" v-model="searchMode" value="sorteo" />
+          Nº de Sorteo
+        </label>
+      </div>
     </div>
 
     <div class="input-group">
@@ -36,20 +53,16 @@
       <div class="success-message">
         <div v-if="foundAspirant">
           <p>¡Hola, <strong>{{ foundAspirant.nombre_apellidos }}</strong>!</p>
-          <p v-if="calculationMode === 'orden'">
-            Te hemos encontrado por tu <strong>nº de orden ({{ foundAspirant.numero_orden }})</strong>.
-            Perteneces al <strong>Tribunal {{ foundTribunal }}</strong>.
-          </p>
-          <p v-if="calculationMode === 'sorteo'">
-            Te hemos encontrado por tu <strong>nº de sorteo ({{ foundAspirant.numero_sorteo }})</strong>.
-            Tu nº de orden real es el {{ foundAspirant.numero_orden }} y perteneces al <strong>Tribunal {{ foundTribunal }}</strong>.
+          <p>
+            Te hemos encontrado en el <strong>Tribunal {{ foundTribunal }}</strong>.
+            (Nº Orden: {{ foundAspirant.numero_orden }}, Nº Sorteo: {{ foundAspirant.numero_sorteo }})
           </p>
         </div>
         
         <div v-if="calculationMode === 'simulacion'">
-          <p><strong>Simulación para no inscritos</strong></p>
+          <p><strong>Simulación para no inscritos (Tribunal {{ selectedTribunal }})</strong></p>
           <p>
-            El número {{ searchInput }} no corresponde a ningún inscrito. La fecha se ha calculado como una simulación, suponiendo que ese es tu <strong>nº de sorteo</strong>.
+            El número {{ searchInput }} no corresponde a ningún inscrito. La fecha se ha calculado como una simulación para el <strong>Tribunal {{ selectedTribunal }}</strong>.
           </p>
         </div>
 
@@ -74,7 +87,6 @@
 </template>
 
 <script setup lang="ts">
-// --- IMPORTS ACTUALIZADOS ---
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -93,9 +105,9 @@ const HOLIDAYS_2025: string[] = ["2025-10-13", "2025-12-08", "2025-12-25"];
 const STATS_2023 = { pace: 5, withdrawalRate: 0.28 };
 const STATS_2021 = { pace: 4, withdrawalRate: 0.25 };
 
-// --- LÓGICA DEL COMPONENTE CON VUE ROUTER ---
 const searchMode = ref<'orden' | 'sorteo'>('orden');
 const searchInput = ref<number | null>(null);
+const selectedTribunal = ref<1 | 2>(1);
 const result = ref<null | { date2023: string, date2021: string }>(null);
 const errorMessage = ref<string | null>(null);
 
@@ -103,7 +115,6 @@ const foundTribunal = ref<number | null>(null);
 const foundAspirant = ref<Aspirant | null>(null);
 const calculationMode = ref<'orden' | 'sorteo' | 'simulacion' | null>(null);
 
-// Instancias de Vue Router
 const router = useRouter();
 const route = useRoute();
 
@@ -113,42 +124,35 @@ const allInscritos: Aspirant[] = [...tribunal1, ...tribunal2];
 
 const placeholderText = computed(() => {
   return searchMode.value === 'orden'
-    ? 'Escribe tu nº de orden...'
-    : 'Escribe tu nº de sorteo...';
+    ? 'Escribe el nº de orden...'
+    : 'Escribe el nº de sorteo...';
 });
 
-// --- NUEVA FUNCIÓN PARA RESETEAR EL ESTADO ---
 const resetSearchState = () => {
+    // No reseteamos los selectores, solo el input y el resultado
     searchInput.value = null;
     result.value = null;
     errorMessage.value = null;
     foundAspirant.value = null;
     foundTribunal.value = null;
     calculationMode.value = null;
-    // Limpiamos también la URL
     router.push({ query: {} });
 };
 
-// --- WATCHER PARA LIMPIAR AL CAMBIAR DE MODO ---
-watch(searchMode, () => {
-    resetSearchState();
-});
+watch(searchMode, resetSearchState);
+watch(selectedTribunal, resetSearchState);
 
 const estimateExamDate = (precedingCount: number, stats: { pace: number, withdrawalRate: number }): Date => {
   const estimatedWithdrawals = Math.round(precedingCount * stats.withdrawalRate);
   const effectivePreviousExams = precedingCount - estimatedWithdrawals;
-
   if (effectivePreviousExams <= 0) return new Date(EXAM_START_DATE);
-
   let estimatedDate = new Date(EXAM_START_DATE);
   let examsProcessed = 0;
-
   while (examsProcessed < effectivePreviousExams) {
     const dayOfWeek = estimatedDate.getDay();
     const isoDate = estimatedDate.toISOString().split('T')[0];
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isHoliday = HOLIDAYS_2025.includes(isoDate);
-
     if (!isWeekend && !isHoliday) {
       switch (dayOfWeek) {
         case 1: examsProcessed += stats.pace * 2; break;
@@ -171,8 +175,6 @@ const formatDate = (date: Date): string => {
 
 const performSearch = () => {
   const query = searchInput.value;
-  
-  // Limpiamos resultados previos pero mantenemos el input
   result.value = null;
   errorMessage.value = null;
   foundAspirant.value = null;
@@ -186,29 +188,50 @@ const performSearch = () => {
   
   let aspirantFound: Aspirant | undefined;
   let precedingCount = 0;
-
+  
   if (searchMode.value === 'orden') {
-    aspirantFound = allInscritos.find(p => p.numero_orden === query);
+    const listToSearch = selectedTribunal.value === 1 ? tribunal1 : tribunal2;
+    aspirantFound = listToSearch.find(p => p.numero_orden === query);
+
     if (aspirantFound) {
       calculationMode.value = 'orden';
-      foundAspirant.value = aspirantFound;
-      precedingCount = aspirantFound.numero_orden - 1;
-      foundTribunal.value = tribunal1.some(p => p.numero_orden === aspirantFound!.numero_orden) ? 1 : 2;
+      foundTribunal.value = selectedTribunal.value;
+      
+      // Cálculo de precedentes corregido
+      if (selectedTribunal.value === 1) {
+        precedingCount = aspirantFound.numero_orden - 1;
+      } else { // Tribunal 2
+        precedingCount = tribunal1.length + (aspirantFound.numero_orden - 1);
+      }
     } else {
-      errorMessage.value = `El nº de orden ${query} no corresponde a ningún inscrito.`;
+      errorMessage.value = `El nº de orden ${query} no se encontró en el Tribunal ${selectedTribunal.value}.`;
       return;
     }
-  } else {
+  } else { // searchMode es 'sorteo'
     aspirantFound = allInscritos.find(p => p.numero_sorteo === query);
     if (aspirantFound) {
       calculationMode.value = 'sorteo';
-      foundAspirant.value = aspirantFound;
-      precedingCount = aspirantFound.numero_orden - 1;
-      foundTribunal.value = tribunal1.some(p => p.numero_orden === aspirantFound!.numero_orden) ? 1 : 2;
+      const isTribunal1 = tribunal1.some(p => p.numero_sorteo === query);
+      foundTribunal.value = isTribunal1 ? 1 : 2;
+
+      // Cálculo de precedentes corregido
+      if (isTribunal1) {
+        precedingCount = aspirantFound.numero_orden - 1;
+      } else {
+        precedingCount = tribunal1.length + (aspirantFound.numero_orden - 1);
+      }
     } else {
       calculationMode.value = 'simulacion';
-      precedingCount = allInscritos.filter(p => p.numero_sorteo < query).length;
+      if (selectedTribunal.value === 1) {
+        precedingCount = tribunal1.filter(p => p.numero_sorteo < query).length;
+      } else { // Tribunal 2
+        precedingCount = tribunal1.length + tribunal2.filter(p => p.numero_sorteo < query).length;
+      }
     }
+  }
+  
+  if (aspirantFound) {
+    foundAspirant.value = aspirantFound;
   }
   
   const dateBasedOn2023 = estimateExamDate(precedingCount, STATS_2023);
@@ -219,42 +242,39 @@ const performSearch = () => {
     date2021: formatDate(dateBasedOn2021)
   };
 
-  // --- ACTUALIZAMOS LA URL CON LA BÚSQUEDA REALIZADA ---
   router.push({
     query: {
+        tribunal: selectedTribunal.value,
         modo: searchMode.value,
-        q: searchInput.value
+        q: searchInput.value,
     }
   });
 };
 
-// --- LÓGICA PARA LEER LA URL AL CARGAR LA PÁGINA ---
 const syncStateFromUrl = (query: typeof route.query) => {
-    const { modo, q } = query;
-    if ((modo === 'orden' || modo === 'sorteo') && q && !isNaN(Number(q))) {
-        searchMode.value = modo;
+    const { modo, q, tribunal } = query;
+    if (q && !isNaN(Number(q))) {
+        if (tribunal === '1' || tribunal === '2') {
+          selectedTribunal.value = parseInt(tribunal, 10) as 1 | 2;
+        }
+        if (modo === 'orden' || modo === 'sorteo') {
+          searchMode.value = modo;
+        }
         searchInput.value = parseInt(q as string, 10);
         performSearch();
     }
 };
 
-// Sincroniza al montar el componente (primera carga)
-onMounted(() => {
-    syncStateFromUrl(route.query);
-});
+onMounted(() => { syncStateFromUrl(route.query); });
 
-// Sincroniza si el usuario navega con los botones de atrás/adelante del navegador
-watch(() => route.query, (newQuery) => {
-    // Evita bucles infinitos, solo reacciona si el input no coincide con la URL
-    if (searchInput.value !== Number(newQuery.q) || searchMode.value !== newQuery.modo) {
+watch(() => route.query, (newQuery, oldQuery) => {
+    if (JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
         syncStateFromUrl(newQuery);
     }
 });
-
 </script>
 
 <style scoped>
-/* Estilos actualizados para los radio buttons */
 .calculator-container {
   max-width: 700px;
   margin: 2rem auto;
@@ -292,7 +312,7 @@ watch(() => route.query, (newQuery) => {
 .input-group {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin-top: 1.5rem;
 }
 input[type="number"] {
   flex-grow: 1;
@@ -371,5 +391,16 @@ button:hover {
     border: 1px solid #ffe58f;
     border-radius: 4px;
     color: #d46b08;
+}
+.tribunal-selector {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #e9e9e9;
+  border-radius: 8px;
+}
+.tribunal-selector h4 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #333;
 }
 </style>
