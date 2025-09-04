@@ -114,6 +114,7 @@ const errorMessage = ref<string | null>(null);
 const foundTribunal = ref<number | null>(null);
 const foundAspirant = ref<Aspirant | null>(null);
 const calculationMode = ref<'orden' | 'sorteo' | 'simulacion' | null>(null);
+const isInitializingFromUrl = ref(false); // Bandera para controlar la inicialización
 
 const router = useRouter();
 const route = useRoute();
@@ -138,31 +139,35 @@ const resetSearchState = () => {
     router.push({ query: {} });
 };
 
-watch(searchMode, resetSearchState);
-watch(selectedTribunal, resetSearchState);
+// --- WATCHERS CORREGIDOS ---
+watch(searchMode, () => {
+    if (!isInitializingFromUrl.value) {
+      resetSearchState();
+    }
+});
+watch(selectedTribunal, () => {
+    if (!isInitializingFromUrl.value) {
+      resetSearchState();
+    }
+});
 
 const estimateExamDate = (precedingCount: number, stats: { pace: number, withdrawalRate: number }): Date => {
   const estimatedWithdrawals = Math.round(precedingCount * stats.withdrawalRate);
   const effectivePreviousExams = precedingCount - estimatedWithdrawals;
   if (effectivePreviousExams <= 0) return new Date(EXAM_START_DATE);
-
   let estimatedDate = new Date(EXAM_START_DATE);
   let examsProcessed = 0;
-
   while (examsProcessed < effectivePreviousExams) {
     const dayOfWeek = estimatedDate.getDay();
     const isoDate = estimatedDate.toISOString().split('T')[0];
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isHoliday = HOLIDAYS_2025.includes(isoDate);
-
     if (!isWeekend && !isHoliday) {
-      // --- LÓGICA CORREGIDA: El ritmo se duplica porque los dos tribunales actúan en paralelo ---
-      const dailyPace = stats.pace * 2; // El doble de opositores por día en total
-
+      const dailyPace = stats.pace * 2;
       switch (dayOfWeek) {
-        case 1: examsProcessed += dailyPace * 2; break; // Lunes (mañana y tarde)
-        case 2: examsProcessed += dailyPace; break;     // Martes (tarde)
-        case 3: examsProcessed += dailyPace; break;     // Miércoles (tarde)
+        case 1: examsProcessed += dailyPace * 2; break;
+        case 2: examsProcessed += dailyPace; break;
+        case 3: examsProcessed += dailyPace; break;
       }
     }
     if (examsProcessed < effectivePreviousExams) {
@@ -201,23 +206,20 @@ const performSearch = () => {
     if (aspirantFound) {
       calculationMode.value = 'orden';
       foundTribunal.value = selectedTribunal.value;
-      // --- LÓGICA CORREGIDA: Se cuentan los opositores en paralelo ---
-      // (Nº de orden - 1) en cada tribunal
       precedingCount = (aspirantFound.numero_orden - 1) * 2;
     } else {
       errorMessage.value = `El nº de orden ${query} no se encontró en el Tribunal ${selectedTribunal.value}.`;
+      // No actualizamos la URL si hay un error
       return;
     }
-  } else { // searchMode es 'sorteo'
+  } else {
     aspirantFound = allInscritos.find(p => p.numero_sorteo === query);
     if (aspirantFound) {
       calculationMode.value = 'sorteo';
       foundTribunal.value = tribunal1.some(p => p.numero_sorteo === query) ? 1 : 2;
-       // --- LÓGICA CORREGIDA: Se cuentan los opositores en paralelo ---
       precedingCount = (aspirantFound.numero_orden - 1) * 2;
     } else {
       calculationMode.value = 'simulacion';
-      // --- LÓGICA CORREGIDA: Se suman los opositores de ambos tribunales con nº de sorteo inferior ---
       const precedingT1 = tribunal1.filter(p => p.numero_sorteo < query).length;
       const precedingT2 = tribunal2.filter(p => p.numero_sorteo < query).length;
       precedingCount = precedingT1 + precedingT2;
@@ -246,18 +248,31 @@ const performSearch = () => {
 };
 
 const syncStateFromUrl = (query: typeof route.query) => {
+    isInitializingFromUrl.value = true; // Activamos la bandera
     const { modo, q, tribunal } = query;
-    if (tribunal === '1' || tribunal === '2') {
-      selectedTribunal.value = parseInt(tribunal, 10) as 1 | 2;
-    }
-    if ((modo === 'orden' || modo === 'sorteo') && q && !isNaN(Number(q))) {
+    
+    if (q && !isNaN(Number(q))) {
+      if (tribunal === '1' || tribunal === '2') {
+        selectedTribunal.value = parseInt(tribunal, 10) as 1 | 2;
+      }
+      if (modo === 'orden' || modo === 'sorteo') {
         searchMode.value = modo;
-        searchInput.value = parseInt(q as string, 10);
-        performSearch();
+      }
+      searchInput.value = parseInt(q as string, 10);
+      performSearch();
     }
+    
+    // Usamos setTimeout para asegurar que la inicialización haya terminado
+    // antes de reactivar los watchers
+    setTimeout(() => {
+        isInitializingFromUrl.value = false; // Desactivamos la bandera
+    }, 0);
 };
 
-onMounted(() => { syncStateFromUrl(route.query); });
+onMounted(() => {
+    syncStateFromUrl(route.query);
+});
+
 watch(() => route.query, (newQuery, oldQuery) => {
     if (JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
         syncStateFromUrl(newQuery);
