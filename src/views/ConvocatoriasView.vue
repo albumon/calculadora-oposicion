@@ -124,7 +124,7 @@ const convocatoriasDelDia = computed(() => {
   const getAspirants = (rango: Rango, inscritos: Aspirant[]): Aspirant[] => {
     return inscritos
       .filter(a => a.numero_sorteo >= rango.inicio && a.numero_sorteo <= rango.fin)
-      .sort((a, b) => a.numero_sorteo - b.numero_sorteo); // Ordenamos por si acaso
+      .sort((a, b) => a.numero_sorteo - b.numero_sorteo);
   };
 
   const formatRango = (rango: Rango): string => {
@@ -176,26 +176,162 @@ const calendarAttributes = computed(() => {
 </script>
 
 <style scoped>
-.convocatorias-container { max-width: 1200px; margin: 2rem auto; }
-.subtitle { text-align: center; color: #555; margin-bottom: 2rem; }
-.main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: flex-start; }
-.calendar-card, .results-card { background-color: #f9f9f9; border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-.calendar-card { padding: 1rem; }
-:deep(.vc-container) { --vc-text-lg: 1.1rem; --vc-text-xl: 1.3rem; --vc-font-bold: 600; border: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
-:deep(.vc-weekday) { font-size: 1rem !important; font-weight: 600; }
-.placeholder { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 200px; color: #888; font-style: italic; }
-.tribunal-results { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-h1, h3, h4 { color: #2c3e50; margin-top: 0; }
-ul { list-style-type: none; padding: 0; margin: 0; }
-li { padding: 0.5rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-li:last-child { border-bottom: none; }
-.no-results { color: #888; }
-.calendar-legend { margin-top: 1.5rem; padding: 0 1rem; }
-.calendar-legend ul { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 1.5rem; }
-.calendar-legend li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #555; border-bottom: none; }
-.legend-color { display: inline-block; width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
-.rango-info { font-weight: bold; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #ddd; }
-.aspirants-details summary { cursor: pointer; color: #0056b3; font-size: 0.9rem; margin-bottom: 0.5rem; }
-.aspirants-details ul { max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; background: #fff; }
-.aspirants-details li { display: flex; justify-content: space-between; }
+.convocatorias-container {
+  max-width: 1200px;
+  margin: 1rem auto; /* Reducido el margen para móviles */
+  padding: 1rem;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  margin-bottom: 2rem;
+}
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: flex-start;
+}
+.calendar-card, .results-card {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.calendar-card {
+  padding: 1rem;
+}
+:deep(.vc-container) {
+  --vc-text-lg: 1.1rem;
+  --vc-text-xl: 1.3rem;
+  --vc-font-bold: 600;
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+:deep(.vc-weekday) {
+  font-size: 1rem !important;
+  font-weight: 600;
+}
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: #888;
+  font-style: italic;
+}
+.tribunal-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+h1, h3, h4 {
+  color: #2c3e50;
+  margin-top: 0;
+}
+ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+li:last-child {
+  border-bottom: none;
+}
+.no-results {
+  color: #888;
+}
+.calendar-legend {
+  margin-top: 1.5rem;
+  padding: 0 1rem;
+}
+.calendar-legend ul {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.calendar-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+  border-bottom: none;
+}
+.legend-color {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.rango-info {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+.aspirants-details summary {
+  cursor: pointer;
+  color: #0056b3;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.aspirants-details ul {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #fff;
+}
+.aspirants-details li {
+  display: flex;
+  justify-content: space-between;
+}
+
+@media (max-width: 992px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
+  .results-card {
+    min-height: auto;
+  }
+
+  .tribunal-results {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.8rem;
+  }
+  .convocatorias-container {
+    padding: 0.5rem;
+    margin: 0.5rem auto;
+  }
+  .calendar-card, .results-card {
+    padding: 1rem;
+  }
+  .calendar-legend ul {
+    gap: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  :deep(.vc-container) {
+    --vc-text-lg: 1rem;
+    --vc-text-xl: 1.1rem;
+  }
+  :deep(.vc-weekday) {
+    font-size: 0.8rem !important;
+  }
+}
 </style>

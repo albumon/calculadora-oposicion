@@ -12,11 +12,11 @@ from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 import locale
 
-try:
-    locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-except locale.Error:
-    locale.setlocale(locale.LC_TIME, 'Spanish')
+# --- LÍNEA SIMPLIFICADA ---
+# Ahora que el workflow instala el idioma, esto debería funcionar siempre.
+locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
 
+# --- El resto del script se mantiene igual ---
 URLS = {
     "tribunal1": "https://oposiciones2025.notariado.org/web/tribunal-1/convocatorias-a-examen",
     "tribunal2": "https://oposiciones2025.notariado.org/web/tribunal-2/convocatorias-a-examen"
@@ -71,7 +71,6 @@ def scrape_convocatorias(base_url):
                 
                 existing_entry = next((item for item in convocatorias if item["fecha"] == fecha_str), None)
                 
-                # NUEVO FORMATO: Guardamos los números directamente
                 convocatoria_obj = {"inicio": rango_inicio, "fin": rango_fin}
                 
                 if existing_entry:

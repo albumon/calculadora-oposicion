@@ -35,6 +35,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
+      - name: Install Spanish language pack & Set Locale
+        run: |
+          sudo apt-get install -y language-pack-es
+          sudo locale-gen es_ES.UTF-8
+          echo "LANG=es_ES.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=es_ES.UTF-8" >> $GITHUB_ENV
+
       - name: Run the scraper
         run: python3 scraper.py
 

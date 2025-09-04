@@ -5,33 +5,36 @@
       Elige un tribunal y un método de búsqueda para estimar tu fecha.
     </p>
 
-    <div class="tribunal-selector">
-      <h4>1. Elige un Tribunal</h4>
-      <div class="search-options">
+    <div class="controls-wrapper">
+      <div class="tribunal-selector">
+        <h4>1. Elige un Tribunal</h4>
+        <div class="search-options">
+            <label>
+              <input type="radio" v-model="selectedTribunal" :value="1" />
+              Tribunal 1
+            </label>
+            <label>
+              <input type="radio" v-model="selectedTribunal" :value="2" />
+              Tribunal 2
+            </label>
+          </div>
+      </div>
+
+      <div class="tribunal-selector" style="background-color: #f0f0f0; border-color: #ddd;">
+        <h4>2. Elige un método de búsqueda</h4>
+        <div class="search-options">
           <label>
-            <input type="radio" v-model="selectedTribunal" :value="1" />
-            Tribunal 1
+            <input type="radio" v-model="searchMode" value="orden" />
+            Nº de Orden
           </label>
           <label>
-            <input type="radio" v-model="selectedTribunal" :value="2" />
-            Tribunal 2
+            <input type="radio" v-model="searchMode" value="sorteo" />
+            Nº de Sorteo
           </label>
         </div>
-    </div>
-
-    <div class="tribunal-selector" style="background-color: #f0f0f0; border-color: #ddd;">
-      <h4>2. Elige un método de búsqueda</h4>
-      <div class="search-options">
-        <label>
-          <input type="radio" v-model="searchMode" value="orden" />
-          Nº de Orden
-        </label>
-        <label>
-          <input type="radio" v-model="searchMode" value="sorteo" />
-          Nº de Sorteo
-        </label>
       </div>
     </div>
+
 
     <div class="input-group">
       <input
@@ -114,7 +117,7 @@ const errorMessage = ref<string | null>(null);
 const foundTribunal = ref<number | null>(null);
 const foundAspirant = ref<Aspirant | null>(null);
 const calculationMode = ref<'orden' | 'sorteo' | 'simulacion' | null>(null);
-const isInitializingFromUrl = ref(false); // Bandera para controlar la inicialización
+const isInitializingFromUrl = ref(false);
 
 const router = useRouter();
 const route = useRoute();
@@ -139,17 +142,8 @@ const resetSearchState = () => {
     router.push({ query: {} });
 };
 
-// --- WATCHERS CORREGIDOS ---
-watch(searchMode, () => {
-    if (!isInitializingFromUrl.value) {
-      resetSearchState();
-    }
-});
-watch(selectedTribunal, () => {
-    if (!isInitializingFromUrl.value) {
-      resetSearchState();
-    }
-});
+watch(searchMode, () => { if (!isInitializingFromUrl.value) resetSearchState(); });
+watch(selectedTribunal, () => { if (!isInitializingFromUrl.value) resetSearchState(); });
 
 const estimateExamDate = (precedingCount: number, stats: { pace: number, withdrawalRate: number }): Date => {
   const estimatedWithdrawals = Math.round(precedingCount * stats.withdrawalRate);
@@ -178,9 +172,7 @@ const estimateExamDate = (precedingCount: number, stats: { pace: number, withdra
 };
 
 const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('es-ES', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
+  return date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 };
 
 const performSearch = () => {
@@ -209,7 +201,6 @@ const performSearch = () => {
       precedingCount = (aspirantFound.numero_orden - 1) * 2;
     } else {
       errorMessage.value = `El nº de orden ${query} no se encontró en el Tribunal ${selectedTribunal.value}.`;
-      // No actualizamos la URL si hay un error
       return;
     }
   } else {
@@ -248,9 +239,8 @@ const performSearch = () => {
 };
 
 const syncStateFromUrl = (query: typeof route.query) => {
-    isInitializingFromUrl.value = true; // Activamos la bandera
+    isInitializingFromUrl.value = true;
     const { modo, q, tribunal } = query;
-    
     if (q && !isNaN(Number(q))) {
       if (tribunal === '1' || tribunal === '2') {
         selectedTribunal.value = parseInt(tribunal, 10) as 1 | 2;
@@ -261,18 +251,10 @@ const syncStateFromUrl = (query: typeof route.query) => {
       searchInput.value = parseInt(q as string, 10);
       performSearch();
     }
-    
-    // Usamos setTimeout para asegurar que la inicialización haya terminado
-    // antes de reactivar los watchers
-    setTimeout(() => {
-        isInitializingFromUrl.value = false; // Desactivamos la bandera
-    }, 0);
+    setTimeout(() => { isInitializingFromUrl.value = false; }, 0);
 };
 
-onMounted(() => {
-    syncStateFromUrl(route.query);
-});
-
+onMounted(() => { syncStateFromUrl(route.query); });
 watch(() => route.query, (newQuery, oldQuery) => {
     if (JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
         syncStateFromUrl(newQuery);
@@ -294,19 +276,35 @@ watch(() => route.query, (newQuery, oldQuery) => {
 .subtitle {
     color: #555;
 }
+.controls-wrapper {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.tribunal-selector {
+  flex: 1;
+  padding: 1rem;
+  background-color: #e9e9e9;
+  border-radius: 8px;
+}
+.tribunal-selector h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+}
 .search-options {
   display: flex;
   justify-content: center;
   gap: 1.5rem;
-  margin-bottom: 0.5rem;
   flex-wrap: wrap;
 }
 .search-options label {
   cursor: pointer;
   padding: 0.5rem 1rem;
   border-radius: 20px;
-  background-color: #e9e9e9;
+  background-color: #fff;
   transition: background-color 0.3s;
+  border: 1px solid #ddd;
 }
 .search-options input[type="radio"] {
   display: none;
@@ -314,6 +312,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
 .search-options label:has(input[type="radio"]:checked) {
     background-color: #42b983;
     color: white;
+    border-color: #42b983;
 }
 .input-group {
   display: flex;
@@ -398,15 +397,22 @@ button:hover {
     border-radius: 4px;
     color: #d46b08;
 }
-.tribunal-selector {
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background-color: #e9e9e9;
-  border-radius: 8px;
-}
-.tribunal-selector h4 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: #333;
+@media (max-width: 768px) {
+  .calculator-container {
+    padding: 1rem;
+    margin: 1rem auto;
+  }
+  .controls-wrapper, .comparison-container {
+    flex-direction: column;
+  }
+  .input-group {
+    flex-direction: column;
+  }
+  .input-group button {
+    width: 100%;
+  }
+  .date-container {
+    min-width: unset;
+  }
 }
 </style>
