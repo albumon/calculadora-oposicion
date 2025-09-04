@@ -5,36 +5,33 @@
       Elige un tribunal y un método de búsqueda para estimar tu fecha.
     </p>
 
-    <div class="controls-wrapper">
-      <div class="tribunal-selector">
-        <h4>1. Elige un Tribunal</h4>
-        <div class="search-options">
-            <label>
-              <input type="radio" v-model="selectedTribunal" :value="1" />
-              Tribunal 1
-            </label>
-            <label>
-              <input type="radio" v-model="selectedTribunal" :value="2" />
-              Tribunal 2
-            </label>
-          </div>
-      </div>
-
-      <div class="tribunal-selector" style="background-color: #f0f0f0; border-color: #ddd;">
-        <h4>2. Elige un método de búsqueda</h4>
-        <div class="search-options">
+    <div class="tribunal-selector">
+      <h4>1. Elige un Tribunal</h4>
+      <div class="search-options">
           <label>
-            <input type="radio" v-model="searchMode" value="orden" />
-            Nº de Orden
+            <input type="radio" v-model="selectedTribunal" :value="1" />
+            Tribunal 1
           </label>
           <label>
-            <input type="radio" v-model="searchMode" value="sorteo" />
-            Nº de Sorteo
+            <input type="radio" v-model="selectedTribunal" :value="2" />
+            Tribunal 2
           </label>
         </div>
-      </div>
     </div>
 
+    <div class="tribunal-selector" style="background-color: #f0f0f0; border-color: #ddd;">
+      <h4>2. Elige un método de búsqueda</h4>
+      <div class="search-options">
+        <label>
+          <input type="radio" v-model="searchMode" value="orden" />
+          Nº de Orden
+        </label>
+        <label>
+          <input type="radio" v-model="searchMode" value="sorteo" />
+          Nº de Sorteo
+        </label>
+      </div>
+    </div>
 
     <div class="input-group">
       <input
@@ -92,6 +89,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useGtag } from 'vue-gtag-next';
 
 interface Aspirant {
   numero_orden: number;
@@ -102,6 +100,8 @@ interface Aspirant {
 
 import tribunal1Data from '@/data/tribunal1_inscritos.json';
 import tribunal2Data from '@/data/tribunal2_inscritos.json';
+
+const { event } = useGtag();
 
 const EXAM_START_DATE = new Date('2025-09-09T09:00:00');
 const HOLIDAYS_2025: string[] = ["2025-10-13", "2025-12-08", "2025-12-25"];
@@ -188,6 +188,12 @@ const performSearch = () => {
     return;
   }
   
+  event('search_dates', {
+    search_tribunal: `Tribunal ${selectedTribunal.value}`,
+    search_mode: searchMode.value,
+    search_query: query,
+  });
+
   let aspirantFound: Aspirant | undefined;
   let precedingCount = 0;
   
@@ -263,156 +269,25 @@ watch(() => route.query, (newQuery, oldQuery) => {
 </script>
 
 <style scoped>
-.calculator-container {
-  max-width: 700px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  text-align: center;
-}
-.subtitle {
-    color: #555;
-}
-.controls-wrapper {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-.tribunal-selector {
-  flex: 1;
-  padding: 1rem;
-  background-color: #e9e9e9;
-  border-radius: 8px;
-}
-.tribunal-selector h4 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: #333;
-}
-.search-options {
-  display: flex;
-  justify-content: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-.search-options label {
-  cursor: pointer;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  background-color: #fff;
-  transition: background-color 0.3s;
-  border: 1px solid #ddd;
-}
-.search-options input[type="radio"] {
-  display: none;
-}
-.search-options label:has(input[type="radio"]:checked) {
-    background-color: #42b983;
-    color: white;
-    border-color: #42b983;
-}
-.input-group {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-input[type="number"] {
-  flex-grow: 1;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-button {
-  padding: 0.75rem 1.5rem;
-  background-color: #42b983;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s;
-}
-button:hover {
-  background-color: #369a6e;
-}
-.result {
-  margin-top: 1.5rem;
-  text-align: left;
-}
-.error-message {
-  padding: 1rem;
-  background-color: #ffdddd;
-  border: 1px solid #ff9999;
-  color: #d8000c;
-  border-radius: 8px;
-  text-align: center;
-}
-.success-message {
-  padding: 1.5rem;
-  background-color: #e2f5e8;
-  border: 1px solid #a1d9b4;
-  color: #357a38;
-  border-radius: 8px;
-}
-.success-message p {
-  margin: 0.5rem 0;
-}
-.comparison-container {
-  display: flex;
-  gap: 1rem;
-  justify-content: space-around;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-.date-container {
-    text-align: center;
-    padding: 1rem;
-    background: #fff;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    flex: 1;
-    min-width: 250px;
-}
-.estimation-title {
-  font-size: 0.9rem;
-  color: #555;
-  margin: 0 0 0.5rem 0;
-}
-.final-date {
-  font-size: 1.3rem;
-  font-weight: bold;
-  color: #2c3e50;
-  margin: 0.2rem 0;
-}
-.disclaimer {
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background-color: #fffbe6;
-    border: 1px solid #ffe58f;
-    border-radius: 4px;
-    color: #d46b08;
-}
-@media (max-width: 768px) {
-  .calculator-container {
-    padding: 1rem;
-    margin: 1rem auto;
-  }
-  .controls-wrapper, .comparison-container {
-    flex-direction: column;
-  }
-  .input-group {
-    flex-direction: column;
-  }
-  .input-group button {
-    width: 100%;
-  }
-  .date-container {
-    min-width: unset;
-  }
-}
+.calculator-container { max-width: 700px; margin: 2rem auto; padding: 2rem; background-color: #f9f9f9; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; text-align: center; }
+.subtitle { color: #555; }
+.search-options { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.search-options label { cursor: pointer; padding: 0.5rem 1rem; border-radius: 20px; background-color: #e9e9e9; transition: background-color 0.3s; }
+.search-options input[type="radio"] { display: none; }
+.search-options label:has(input[type="radio"]:checked) { background-color: #42b983; color: white; }
+.input-group { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+input[type="number"] { flex-grow: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+button { padding: 0.75rem 1.5rem; background-color: #42b983; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.3s; }
+button:hover { background-color: #369a6e; }
+.result { margin-top: 1.5rem; text-align: left; }
+.error-message { padding: 1rem; background-color: #ffdddd; border: 1px solid #ff9999; color: #d8000c; border-radius: 8px; text-align: center; }
+.success-message { padding: 1.5rem; background-color: #e2f5e8; border: 1px solid #a1d9b4; color: #357a38; border-radius: 8px; }
+.success-message p { margin: 0.5rem 0; }
+.comparison-container { display: flex; gap: 1rem; justify-content: space-around; margin-top: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.date-container { text-align: center; padding: 1rem; background: #fff; border-radius: 8px; border: 1px solid #ddd; flex: 1; min-width: 250px; }
+.estimation-title { font-size: 0.9rem; color: #555; margin: 0 0 0.5rem 0; }
+.final-date { font-size: 1.3rem; font-weight: bold; color: #2c3e50; margin: 0.2rem 0; }
+.disclaimer { margin-top: 1.5rem; padding: 1rem; background-color: #fffbe6; border: 1px solid #ffe58f; border-radius: 4px; color: #d46b08; }
+.tribunal-selector { margin-bottom: 1rem; padding: 1rem; background-color: #e9e9e9; border-radius: 8px; }
+.tribunal-selector h4 { margin-top: 0; margin-bottom: 1rem; color: #333; }
 </style>
