@@ -39,13 +39,13 @@ jobs:
         run: python3 scraper.py
 
       - name: Run the convocatorias scraper
-  run: python3 scraper_convocatorias.py
+        run: python3 scraper_convocatorias.py
 
       - name: Commit and push if data changed
-  uses: stefanzweifel/git-auto-commit-action@v5
-  with:
-    token: ${{ secrets.ACTIONS_PAT }}
-    commit_message: "📊 Chore: Update scraped data"
-    file_pattern: "src/data/tribunal1_inscritos.json src/data/tribunal2_inscritos.json src/data/convocatorias.json"
-    commit_user_name: "GitHub Actions Bot"
-    commit_user_email: "actions@github.com"
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          token: ${{ secrets.ACTIONS_PAT }}
+          commit_message: "📊 Chore: Update scraped data"
+          file_pattern: "src/data/tribunal1_inscritos.json src/data/tribunal2_inscritos.json src/data/convocatorias.json"
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
