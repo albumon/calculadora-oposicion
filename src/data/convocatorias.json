@@ -1,0 +1,42 @@
+{
+  "tribunal1": [
+    {
+      "fecha": "2025-09-11",
+      "convocados": [
+        {
+          "inicio": 21,
+          "fin": 28
+        }
+      ]
+    },
+    {
+      "fecha": "2025-09-09",
+      "convocados": [
+        {
+          "inicio": 1,
+          "fin": 20
+        }
+      ]
+    }
+  ],
+  "tribunal2": [
+    {
+      "fecha": "2025-09-11",
+      "convocados": [
+        {
+          "inicio": 446,
+          "fin": 451
+        }
+      ]
+    },
+    {
+      "fecha": "2025-09-09",
+      "convocados": [
+        {
+          "inicio": 419,
+          "fin": 445
+        }
+      ]
+    }
+  ]
+}
